@@ -10,6 +10,7 @@ package org.mifos.community.copilot.core.approval;
 import org.mifos.community.copilot.core.llm.LlmToolCall;
 
 import java.time.Instant;
+import java.util.Map;
 
 /**
  * A write action paused for human confirmation (ADR-001 §04).
@@ -17,9 +18,12 @@ import java.time.Instant;
  * <p>{@code securityFingerprint} binds the card to the asking officer and tenant, so only the same
  * identity may decide it. {@code idempotencyKey} is minted HERE, server-side, at card creation;
  * client-supplied keys are ignored by design. No raw credential is ever stored.
+ *
+ * <p>{@code rows} are the labelled values the officer read before confirming. They are kept so
+ * the receipt shown afterwards names the same account, rather than falling back to an id.
  */
 public record PendingApproval(String cardId, String conversationId, LlmToolCall toolCall, String humanSummary,
-        String idempotencyKey, String securityFingerprint, Instant expiresAt) {
+        String idempotencyKey, String securityFingerprint, Instant expiresAt, Map<String, String> rows) {
 
     public boolean isExpired(Instant now) {
         return now.isAfter(expiresAt);
