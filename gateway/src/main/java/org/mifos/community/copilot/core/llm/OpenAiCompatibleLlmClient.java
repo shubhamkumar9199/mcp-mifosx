@@ -129,7 +129,6 @@ public final class OpenAiCompatibleLlmClient implements LlmClient {
             text.append(answer);
             onToken.accept(answer);
         }, onReasoning);
-        boolean reasoningFieldSeen = false;
         // OpenAI streams tool calls as fragments keyed by index: name arrives once,
         // the JSON `arguments` string arrives in pieces that must be concatenated.
         Map<Integer, PartialToolCall> partial = new TreeMap<>();
@@ -152,22 +151,19 @@ public final class OpenAiCompatibleLlmClient implements LlmClient {
                 // value that neither means "absent".
                 for (String field : REASONING_FIELDS) {
                     if (delta.hasNonNull(field) && !delta.get(field).asText().isEmpty()) {
-                        reasoningFieldSeen = true;
                         onReasoning.accept(delta.get(field).asText());
                     }
                 }
 
                 JsonNode content = delta.path("content");
                 if (content.isTextual() && !content.asText().isEmpty()) {
-                    if (reasoningFieldSeen) {
-                        // The provider is separating the two itself, so the content channel is
-                        // the answer and nothing else. Running the splitter over it as well
-                        // would only risk swallowing a client whose name contains a bracket.
-                        text.append(content.asText());
-                        onToken.accept(content.asText());
-                    } else {
-                        inlineThinking.accept(content.asText());
-                    }
+                    // Always, even once a native reasoning field has been seen. Assuming a
+                    // provider that separates the two will never also inline them is an
+                    // assumption about every proxy and adapter in front of every engine, and
+                    // being wrong means a model's private deliberation reaching a loan officer
+                    // as though it were advice. Nothing legitimate is lost: the splitter only
+                    // recognises the literal <think> and </think>.
+                    inlineThinking.accept(content.asText());
                 }
                 for (JsonNode fragment : delta.path("tool_calls")) {
                     int index = fragment.path("index").asInt(0);

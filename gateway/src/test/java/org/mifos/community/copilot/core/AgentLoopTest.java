@@ -354,8 +354,11 @@ class AgentLoopTest {
             if (result == null) {
                 return new LlmResult("(no scripted response)", List.of());
             }
-            if (reasoning != null) {
-                onReasoning.accept(reasoning);
+            // Taken, not read: it configures one turn, so a multi-round test does not repeat it.
+            String thisTurn = reasoning;
+            reasoning = null;
+            if (thisTurn != null) {
+                onReasoning.accept(thisTurn);
             }
             if (!result.text().isBlank()) {
                 onToken.accept(result.text());

@@ -235,13 +235,19 @@ public final class AgentLoop {
                 // thinking turned off still emits an empty pair of markers, and a panel that
                 // appears empty on every turn reads as broken rather than as quiet.
                 ThinkingChannel thinking = new ThinkingChannel(sink);
-                result = llm.complete(
-                        withSystemPrompt(screenContext, conversations.messages(fingerprint, conversationId), context),
-                        manifest.openAiSchemas(),
-                        (delta) -> sink.emit(StreamEvent.token(delta)),
-                        thinking::accept,
-                        sink::isCancelled);
-                thinking.close();
+                try {
+                    result = llm.complete(
+                            withSystemPrompt(screenContext, conversations.messages(fingerprint, conversationId),
+                                    context),
+                            manifest.openAiSchemas(),
+                            (delta) -> sink.emit(StreamEvent.token(delta)),
+                            thinking::accept,
+                            sink::isCancelled);
+                } finally {
+                    // Closed even when the call throws. A provider that emits reasoning and then
+                    // fails would otherwise leave the panel open on a turn that is already over.
+                    thinking.close();
+                }
             } catch (LlmException e) {
                 // A refusal is not an outage. Telling an officer to try again shortly, when the
                 // key is wrong or the request was malformed, sends them round a loop that cannot

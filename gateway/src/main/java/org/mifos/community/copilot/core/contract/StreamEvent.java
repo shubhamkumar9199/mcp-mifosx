@@ -32,6 +32,12 @@ public record StreamEvent(String name, Map<String, Object> data) {
      * how it got there. A client that does not know this event ignores it and shows the answer
      * exactly as before.
      */
+    /**
+     * The model has begun writing, and a panel can be opened for it.
+     *
+     * <p>Emitted on the first non-blank character rather than on stream open, so a model with
+     * thinking switched off produces no panel at all rather than an empty one.
+     */
     public static StreamEvent thinkingStart() {
         return new StreamEvent("thinking", Map.of("phase", "start"));
     }
@@ -50,6 +56,13 @@ public record StreamEvent(String name, Map<String, Object> data) {
         return new StreamEvent("thinking", data);
     }
 
+    /**
+     * The model has stopped writing, with how long it spent.
+     *
+     * <p>{@code elapsed_ms} is what lets the panel say a number rather than a spinner, which is
+     * the difference between an officer seeing that the assistant is working and an officer
+     * wondering whether it has hung.
+     */
     public static StreamEvent thinkingEnd(long elapsedMs) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("phase", "end");
